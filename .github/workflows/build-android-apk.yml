@@ -12,35 +12,22 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@v4
 
-      - name: Create local.properties
+      - name: Generate Gradle Wrapper and Build
         working-directory: ClassIsland.Android
-        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-      - name: Generate Gradle Wrapper
-        working-directory: ClassIsland.Android
-        run: gradle wrapper --gradle-version 8.5
-
-      - name: Build APK
-        working-directory: ClassIsland.Android
-        continue-on-error: false
         run: |
-          echo "=== Gradle version ==="
-          ./gradlew --version
-          echo "=== Building APK ==="
-          ./gradlew assembleDebug --no-daemon 2>&1
-          echo "=== Build exit code: $? ==="
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          gradle wrapper --gradle-version 8.5 2>&1
+          ls -la gradlew gradle/wrapper/
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
 
       - name: Find and list APK files
         run: |
@@ -64,7 +51,6 @@ jobs:
             ls -la /workspace/github/actions/$BUILD_ID/产物/
           else
             echo "No APK files found to save"
-            mkdir -p /workspace/github/actions/$BUILD_ID/产物
             echo "NO_APK_BUILT" > /workspace/github/actions/$BUILD_ID/产物/status.txt
           fi
 
