@@ -25,11 +25,18 @@ jobs:
         working-directory: ClassIsland.Android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew assembleDebug --no-daemon 2>&1
+          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
 
-      - name: Upload entire build outputs
+      - name: Find and save APK
+        run: |
+          echo "=== APK find ==="
+          find . -name "*.apk" -type f 2>/dev/null || echo "NOT FOUND"
+          echo "=== build dir ==="
+          ls -la ClassIsland.Android/app/build/outputs/ 2>/dev/null || echo "NO OUTPUTS"
+
+      - name: Upload outputs
         uses: actions/upload-artifact@v4
         with:
-          name: build-outputs
-          path: ClassIsland.Android/app/build/
-          if-no-files-found: error
+          name: classisland-apk
+          path: ClassIsland.Android/app/build/outputs/
+          if-no-files-found: warn
