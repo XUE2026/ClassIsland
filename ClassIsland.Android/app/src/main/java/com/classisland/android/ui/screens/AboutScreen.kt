@@ -27,12 +27,12 @@ fun AboutScreen(modifier: Modifier = Modifier) {
         Text("智慧课表 · 悬浮窗", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
         Text("版本 1.0.0", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(32.dp)); HorizontalDivider(); Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(32.dp)); Divider(); Spacer(Modifier.height(16.dp))
 
         ListItem(headlineContent = { Text("原作者") }, supportingContent = { Text("ClassIsland 项目组") }, leadingContent = { Icon(Icons.Default.Person, null) })
         ListItem(headlineContent = { Text("修改者") }, supportingContent = { Text(Constants.MODIFIER) }, leadingContent = { Icon(Icons.Default.Build, null) })
         ListItem(headlineContent = { Text("原始 GitHub 项目") }, supportingContent = { Text(Constants.ORIGINAL_GITHUB) }, leadingContent = { Icon(Icons.Default.Code, null) }, trailingContent = { IconButton({ ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Constants.ORIGINAL_GITHUB))) }) { Icon(Icons.Default.OpenInNew, null) } })
-        ListItem(headlineContent = { Text("修改者 GitHub") }, supportingContent = { Text(Constants.MODIFIER_GITHUB) }, leadingContent = { Icon(Icons.Default.GitHub, null) }, trailingContent = { IconButton({ ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Constants.MODIFIER_GITHUB))) }) { Icon(Icons.Default.OpenInNew, null) } })
+        ListItem(headlineContent = { Text("修改者 GitHub") }, supportingContent = { Text(Constants.MODIFIER_GITHUB) }, leadingContent = { Icon(Icons.Default.Code, null) }, trailingContent = { IconButton({ ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Constants.MODIFIER_GITHUB))) }) { Icon(Icons.Default.OpenInNew, null) } })
 
         Spacer(Modifier.height(16.dp))
         Card(Modifier.fillMaxWidth()) {

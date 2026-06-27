@@ -22,7 +22,6 @@ import com.classisland.android.overlay.OverlayService
 import com.classisland.android.ui.components.LicenseDialog
 import com.classisland.android.ui.screens.AboutScreen
 import com.classisland.android.ui.screens.OverlaySettingsScreen
-import com.classisland.android.ui.screens.ProfileSettingsScreen
 import com.classisland.android.ui.theme.ClassIslandTheme
 import com.classisland.android.util.SettingsManager
 
@@ -34,9 +33,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         settings = SettingsManager.get(this).load()
-        var showLicense by remember { mutableStateOf(settings.firstLaunch && !settings.licenseAccepted) }
 
         setContent {
+            var showLicense by remember { mutableStateOf(settings.firstLaunch && !settings.licenseAccepted) }
             ClassIslandTheme(settings.themeMode) {
                 if (showLicense) LicenseDialog(
                     onAccept = {
@@ -50,8 +49,8 @@ class MainActivity : ComponentActivity() {
                 var tab by remember { mutableStateOf(0) }
                 Scaffold(bottomBar = {
                     NavigationBar {
-                        NavigationBarItem(tab == 0, { tab = 0 }, { Icon(Icons.Default.Tune, null) }, { Text("设置") })
-                        NavigationBarItem(tab == 1, { tab = 1 }, { Icon(Icons.Default.Info, null) }, { Text("关于") })
+                        NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.Tune, null) }, label = { Text("设置") })
+                        NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Info, null) }, label = { Text("关于") })
                     }
                 }) { p ->
                     when (tab) {

@@ -21,7 +21,7 @@ fun OverlaySettingsScreen(settings: AppSettings, onChanged: (AppSettings) -> Uni
         SwitchSetting("启用悬浮窗", settings.enableOverlay, { onChanged(settings.copy(enableOverlay = it)) })
 
         if (settings.enableOverlay) {
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Divider(Modifier.padding(vertical = 8.dp))
             Text("位置设置", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
             NumSetting("X 坐标", settings.overlayX) { onChanged(settings.copy(overlayX = it)) }
             NumSetting("Y 坐标", settings.overlayY) { onChanged(settings.copy(overlayY = it)) }
@@ -30,7 +30,7 @@ fun OverlaySettingsScreen(settings: AppSettings, onChanged: (AppSettings) -> Uni
             Text("透明度: ${(settings.overlayOpacity*100).toInt()}%", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             Slider(settings.overlayOpacity, { onChanged(settings.copy(overlayOpacity = it)) }, valueRange = 0.1f..1.0f, modifier = Modifier.padding(horizontal = 16.dp))
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Divider(Modifier.padding(vertical = 8.dp))
             Text("样式设置", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
             ColorSetting("背景颜色", settings.overlayStyle.backgroundColor) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(backgroundColor = it))) }
             ColorSetting("文字颜色", settings.overlayStyle.textColor) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(textColor = it))) }
@@ -39,7 +39,7 @@ fun OverlaySettingsScreen(settings: AppSettings, onChanged: (AppSettings) -> Uni
             NumSetting("圆角大小", settings.overlayStyle.borderRadius) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(borderRadius = it))) }
             NumSetting("字体大小", settings.overlayStyle.fontSize) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(fontSize = it))) }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            Divider(Modifier.padding(vertical = 8.dp))
             Text("显示设置", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
             SwitchSetting("显示教师", settings.overlayStyle.showTeacherName) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(showTeacherName = it))) }
             SwitchSetting("显示教室", settings.overlayStyle.showClassroom) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(showClassroom = it))) }
@@ -51,7 +51,7 @@ fun OverlaySettingsScreen(settings: AppSettings, onChanged: (AppSettings) -> Uni
             NumSetting("行间距", settings.overlayStyle.itemSpacing) { onChanged(settings.copy(overlayStyle = settings.overlayStyle.copy(itemSpacing = it))) }
         }
 
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Divider(Modifier.padding(vertical = 8.dp))
         Text("通用设置", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
         SwitchSetting("GPU 加速", settings.enableGpuAcceleration) { onChanged(settings.copy(enableGpuAcceleration = it)) }
         SwitchSetting("开机自启", settings.autoStartEnabled) { onChanged(settings.copy(autoStartEnabled = it)) }

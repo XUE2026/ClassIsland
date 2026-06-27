@@ -20,7 +20,7 @@ fun LicenseDialog(onAccept: () -> Unit, onDecline: () -> Unit) {
             Column(Modifier.padding(24.dp)) {
                 Text("许可协议", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(8.dp))
-                HorizontalDivider()
+                Divider()
                 Spacer(Modifier.height(16.dp))
                 Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
                     Text(

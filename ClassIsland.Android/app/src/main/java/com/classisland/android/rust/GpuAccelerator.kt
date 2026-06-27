@@ -20,7 +20,7 @@ class GpuAccelerator {
 
     fun render(items: String, w: Int, h: Int, bg: Int, fg: Int): Boolean = try {
         if (nativeLoaded) nativeRender(items, w, h, bg, fg)
-        else { GLES20.glClearColor(((bg shr 16)and0xFF)/255f, ((bg shr 8)and0xFF)/255f, (bg and 0xFF)/255f, ((bg shr 24)and0xFF)/255f); GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT) }
+        else { GLES20.glClearColor(((bg shr 16) and 0xFF)/255f, ((bg shr 8) and 0xFF)/255f, (bg and 0xFF)/255f, ((bg shr 24) and 0xFF)/255f); GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT) }
         true
     } catch (e: Exception) { false }
 

@@ -6,6 +6,8 @@ import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import com.classisland.android.model.AppSettings
 import com.classisland.android.model.profile.Subject
 import com.classisland.android.service.ProfileService
