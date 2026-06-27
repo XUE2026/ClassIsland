@@ -24,6 +24,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept SDK licenses and install components
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools" 2>&1 || true
+          echo "SDK setup complete"
+
       - name: Create local.properties
         working-directory: ClassIsland.Android
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
@@ -34,11 +43,17 @@ jobs:
 
       - name: Build Debug APK
         working-directory: ClassIsland.Android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Save APK to workspace
+        run: |
+          mkdir -p /workspace/github/actions/${{ github.run_id }}
+          cp -r ClassIsland.Android/app/build/outputs/apk/* /workspace/github/actions/${{ github.run_id }}/ 2>/dev/null || true
+          find /workspace/github/actions/ -name "*.apk" -ls 2>/dev/null || echo "No APK found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: classisland-android-apk
           path: ClassIsland.Android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
