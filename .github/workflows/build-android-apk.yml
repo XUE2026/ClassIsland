@@ -21,15 +21,41 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - name: Generate Gradle Wrapper and Build
-        working-directory: ClassIsland.Android
+      - name: Accept SDK licenses and list SDK
         run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          echo "=== Installed SDK packages ==="
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list 2>/dev/null | head -30 || true
+
+      - name: Build APK (with full log capture)
+        id: build
+        working-directory: ClassIsland.Android
+        continue-on-error: true
+        run: |
+          set -o pipefail
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          gradle wrapper --gradle-version 8.5 2>&1
+          echo "=== local.properties ==="
+          cat local.properties
+          echo "=== ANDROID_HOME ==="
+          echo "$ANDROID_HOME"
+          echo "=== Checking gradlew ==="
           ls -la gradlew gradle/wrapper/
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
+          echo "=== Running build ==="
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "=== BUILD EXIT CODE: $EXIT_CODE ==="
+          exit $EXIT_CODE
+
+      - name: Upload build log (even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/build.log
+          if-no-files-found: ignore
 
       - name: Find and list APK files
+        if: always()
         run: |
           echo "=== Searching for APK files ==="
           find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
@@ -39,6 +65,7 @@ jobs:
           find ClassIsland.Android/app/build/ -type d -maxdepth 5 2>/dev/null || true
 
       - name: Save APK to workspace
+        if: always()
         run: |
           BUILD_ID=${{ github.run_id }}
           mkdir -p /workspace/github/actions/$BUILD_ID/产物
@@ -55,6 +82,7 @@ jobs:
           fi
 
       - name: Upload APK artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: classisland-android-apk
