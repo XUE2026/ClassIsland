@@ -21,21 +21,37 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - name: Setup and build
+      - name: Gradle info
         working-directory: ClassIsland.Android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
+          ./gradlew --version 2>&1
 
-      - name: Dump build tree
+      - name: List available tasks
+        working-directory: ClassIsland.Android
+        run: ./gradlew tasks --all --no-daemon 2>&1 | head -100
+
+      - name: Assemble debug
+        working-directory: ClassIsland.Android
         run: |
-          find ClassIsland.Android -type f 2>/dev/null | sort > /tmp/files.txt
-          wc -l /tmp/files.txt
-          grep -i "apk\|aab\|output\|build" /tmp/files.txt || echo "No matches"
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -200
 
-      - name: Upload artifact
+      - name: Dump build outputs
+        if: always()
+        run: |
+          find ClassIsland.Android -type f 2>/dev/null | sort > /tmp/files2.txt
+          echo "=== Files containing 'apk' ==="
+          grep -i "apk" /tmp/files2.txt || echo "No APK files"
+          echo "=== Files containing 'output' ==="
+          grep -i "output" /tmp/files2.txt || echo "No output files"
+          echo "=== build directory ==="
+          find ClassIsland.Android/app/build -type f 2>/dev/null | head -50 || echo "No build dir"
+
+      - name: Upload file list
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: files-txt
-          path: /tmp/files.txt
+          name: files2
+          path: /tmp/files2.txt
           if-no-files-found: error
