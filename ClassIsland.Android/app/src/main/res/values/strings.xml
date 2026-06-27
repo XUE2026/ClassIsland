@@ -43,7 +43,7 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="confirm">Confirm</string>
-    <string name="import">Import</string>
+    <string name="import_data">Import</string>
     <string name="export">Export</string>
     <string name="request_permission">Request Permission</string>
     <string name="about_title">About ClassIsland</string>

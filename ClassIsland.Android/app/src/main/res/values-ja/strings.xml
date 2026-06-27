@@ -35,7 +35,7 @@
     <string name="delete">削除</string>
     <string name="save">保存</string>
     <string name="cancel">キャンセル</string>
-    <string name="import">インポート</string>
+    <string name="import_data">インポート</string>
     <string name="export">エクスポート</string>
     <string name="request_permission">権限をリクエスト</string>
     <string name="about_original">原作者</string>
