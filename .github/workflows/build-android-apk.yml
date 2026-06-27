@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate Gradle Wrapper
         working-directory: ClassIsland.Android
-        run: gradle wrapper --gradle-version 8.7
+        run: gradle wrapper --gradle-version 8.5
 
       - name: Clean and build
         working-directory: ClassIsland.Android
