@@ -21,71 +21,20 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - name: Accept SDK licenses and list SDK
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
-          echo "=== Installed SDK packages ==="
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list 2>/dev/null | head -30 || true
-
-      - name: Build APK (with full log capture)
-        id: build
+      - name: Setup and build
         working-directory: ClassIsland.Android
-        continue-on-error: true
         run: |
-          set -o pipefail
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "=== local.properties ==="
-          cat local.properties
-          echo "=== ANDROID_HOME ==="
-          echo "$ANDROID_HOME"
-          echo "=== Checking gradlew ==="
-          ls -la gradlew gradle/wrapper/
-          echo "=== Running build ==="
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          echo "=== BUILD EXIT CODE: $EXIT_CODE ==="
-          exit $EXIT_CODE
+          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
 
-      - name: Upload build log (even on failure)
-        if: always()
+      - name: Find and save APK
+        run: |
+          echo "=== APK find ==="
+          find . -name "*.apk" -type f 2>/dev/null || echo "NOT FOUND"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: /tmp/build.log
-          if-no-files-found: ignore
-
-      - name: Find and list APK files
-        if: always()
-        run: |
-          echo "=== Searching for APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
-          echo "=== Build output directory ==="
-          find ClassIsland.Android/ -path "*/outputs/apk/*" -type f 2>/dev/null || echo "No outputs"
-          echo "=== Full build directory tree ==="
-          find ClassIsland.Android/app/build/ -type d -maxdepth 5 2>/dev/null || true
-
-      - name: Save APK to workspace
-        if: always()
-        run: |
-          BUILD_ID=${{ github.run_id }}
-          mkdir -p /workspace/github/actions/$BUILD_ID/产物
-          APKS=$(find . -name "*.apk" -type f 2>/dev/null)
-          if [ -n "$APKS" ]; then
-            echo "$APKS" | while read apk; do
-              echo "Saving: $apk"
-              cp "$apk" /workspace/github/actions/$BUILD_ID/产物/
-            done
-            ls -la /workspace/github/actions/$BUILD_ID/产物/
-          else
-            echo "No APK files found to save"
-            echo "NO_APK_BUILT" > /workspace/github/actions/$BUILD_ID/产物/status.txt
-          fi
-
-      - name: Upload APK artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: classisland-android-apk
-          path: |
-            **/*.apk
+          name: classisland-apk
+          path: ClassIsland.Android/**/*.apk
           if-no-files-found: warn
