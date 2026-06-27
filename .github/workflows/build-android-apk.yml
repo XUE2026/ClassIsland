@@ -41,9 +41,16 @@ jobs:
         working-directory: ClassIsland.Android
         run: gradle wrapper --gradle-version 8.7
 
-      - name: Build Debug APK
+      - name: Clean and build
         working-directory: ClassIsland.Android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        continue-on-error: false
+        run: |
+          echo "=== Running gradle tasks ==="
+          ./gradlew --version
+          echo "=== Checking project ==="
+          ./gradlew projects --no-daemon 2>&1
+          echo "=== Building ==="
+          ./gradlew assembleDebug --no-daemon --info 2>&1
 
       - name: Save APK to workspace
         run: |
