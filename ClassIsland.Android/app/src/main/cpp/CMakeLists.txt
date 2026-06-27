@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22.1)
+project("classisland_rust")
+add_library(classisland_rust SHARED IMPORTED)
+set_target_properties(classisland_rust PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}/libclassisland_rust.so)
+find_library(GLESv2_LIBRARY GLESv2)
+find_library(EGL_LIBRARY EGL)
+target_link_libraries(classisland_rust ${GLESv2_LIBRARY} ${EGL_LIBRARY} log)

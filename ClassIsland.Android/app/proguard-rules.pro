@@ -1,0 +1,3 @@
+-keepclassmembers class com.classisland.android.model.** { *** Companion; @kotlinx.serialization.Serializable *; }
+-keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
+-keepclasseswithmembernames class * { native <methods>; }
