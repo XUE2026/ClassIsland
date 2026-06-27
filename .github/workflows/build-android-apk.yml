@@ -22,16 +22,7 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept SDK licenses and install components
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "platforms;android-34" \
-            "build-tools;34.0.0" \
-            "platform-tools" 2>&1 || true
-          echo "SDK setup complete"
+        uses: android-actions/setup-android@v4
 
       - name: Create local.properties
         working-directory: ClassIsland.Android
@@ -41,26 +32,46 @@ jobs:
         working-directory: ClassIsland.Android
         run: gradle wrapper --gradle-version 8.5
 
-      - name: Clean and build
+      - name: Build APK
         working-directory: ClassIsland.Android
         continue-on-error: false
         run: |
-          echo "=== Running gradle tasks ==="
+          echo "=== Gradle version ==="
           ./gradlew --version
-          echo "=== Checking project ==="
-          ./gradlew projects --no-daemon 2>&1
-          echo "=== Building ==="
-          ./gradlew assembleDebug --no-daemon --info 2>&1
+          echo "=== Building APK ==="
+          ./gradlew assembleDebug --no-daemon 2>&1
+          echo "=== Build exit code: $? ==="
+
+      - name: Find and list APK files
+        run: |
+          echo "=== Searching for APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          echo "=== Build output directory ==="
+          find ClassIsland.Android/ -path "*/outputs/apk/*" -type f 2>/dev/null || echo "No outputs"
+          echo "=== Full build directory tree ==="
+          find ClassIsland.Android/app/build/ -type d -maxdepth 5 2>/dev/null || true
 
       - name: Save APK to workspace
         run: |
-          mkdir -p /workspace/github/actions/${{ github.run_id }}
-          cp -r ClassIsland.Android/app/build/outputs/apk/* /workspace/github/actions/${{ github.run_id }}/ 2>/dev/null || true
-          find /workspace/github/actions/ -name "*.apk" -ls 2>/dev/null || echo "No APK found"
+          BUILD_ID=${{ github.run_id }}
+          mkdir -p /workspace/github/actions/$BUILD_ID/产物
+          APKS=$(find . -name "*.apk" -type f 2>/dev/null)
+          if [ -n "$APKS" ]; then
+            echo "$APKS" | while read apk; do
+              echo "Saving: $apk"
+              cp "$apk" /workspace/github/actions/$BUILD_ID/产物/
+            done
+            ls -la /workspace/github/actions/$BUILD_ID/产物/
+          else
+            echo "No APK files found to save"
+            mkdir -p /workspace/github/actions/$BUILD_ID/产物
+            echo "NO_APK_BUILT" > /workspace/github/actions/$BUILD_ID/产物/status.txt
+          fi
 
-      - name: Upload APK
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: classisland-android-apk
-          path: ClassIsland.Android/app/build/outputs/apk/debug/*.apk
+          path: |
+            **/*.apk
           if-no-files-found: warn
