@@ -27,16 +27,15 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
 
-      - name: Find and save APK
+      - name: Dump build tree
         run: |
-          echo "=== APK find ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "NOT FOUND"
-          echo "=== build dir ==="
-          ls -la ClassIsland.Android/app/build/outputs/ 2>/dev/null || echo "NO OUTPUTS"
+          find ClassIsland.Android -type f 2>/dev/null | sort > /tmp/files.txt
+          wc -l /tmp/files.txt
+          grep -i "apk\|aab\|output\|build" /tmp/files.txt || echo "No matches"
 
-      - name: Upload outputs
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: classisland-apk
-          path: ClassIsland.Android/app/build/outputs/
-          if-no-files-found: warn
+          name: files-txt
+          path: /tmp/files.txt
+          if-no-files-found: error
