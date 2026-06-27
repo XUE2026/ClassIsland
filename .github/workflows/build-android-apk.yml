@@ -21,37 +21,23 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - name: Gradle info
+      - name: Full build with log capture
         working-directory: ClassIsland.Android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew --version 2>&1
+          echo "=== GRADLE VERSION ===" > /tmp/build.log
+          ./gradlew --version 2>&1 | tee -a /tmp/build.log
+          echo "=== AVAILABLE TASKS ===" >> /tmp/build.log
+          ./gradlew tasks --all --no-daemon 2>&1 | tee -a /tmp/build.log
+          echo "=== BUILD ===" >> /tmp/build.log
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee -a /tmp/build.log
+          echo "=== DONE ===" >> /tmp/build.log
+          echo "Build log size: $(wc -l < /tmp/build.log) lines"
 
-      - name: List available tasks
-        working-directory: ClassIsland.Android
-        run: ./gradlew tasks --all --no-daemon 2>&1 | head -100
-
-      - name: Assemble debug
-        working-directory: ClassIsland.Android
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -200
-
-      - name: Dump build outputs
-        if: always()
-        run: |
-          find ClassIsland.Android -type f 2>/dev/null | sort > /tmp/files2.txt
-          echo "=== Files containing 'apk' ==="
-          grep -i "apk" /tmp/files2.txt || echo "No APK files"
-          echo "=== Files containing 'output' ==="
-          grep -i "output" /tmp/files2.txt || echo "No output files"
-          echo "=== build directory ==="
-          find ClassIsland.Android/app/build -type f 2>/dev/null | head -50 || echo "No build dir"
-
-      - name: Upload file list
+      - name: Upload full build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: files2
-          path: /tmp/files2.txt
+          name: full-build-log
+          path: /tmp/build.log
           if-no-files-found: error
