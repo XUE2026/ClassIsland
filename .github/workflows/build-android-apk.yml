@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate Gradle Wrapper
         working-directory: ClassIsland.Android
-        run: gradle wrapper --gradle-version 8.5
+        run: gradle wrapper --gradle-version 8.7
 
       - name: Build Debug APK
         working-directory: ClassIsland.Android
