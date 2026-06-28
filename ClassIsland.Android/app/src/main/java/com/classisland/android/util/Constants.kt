@@ -8,6 +8,8 @@ object Constants {
     const val NOTIFICATION_CHANNEL_ID = "classisland_notifications"
     const val FOREGROUND_NOTIFICATION_ID = 1001
 
+    const val DEFAULT_API_URL = "https://classisland.example.com/api"
+
     const val ORIGINAL_AUTHOR = "ClassIsland Team"
     const val ORIGINAL_GITHUB = "https://github.com/ClassIsland/ClassIsland"
     const val MODIFIER = "XUE2026"

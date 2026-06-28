@@ -9,9 +9,19 @@ data class Profile(
     val classPlans: MutableList<ClassPlan> = mutableListOf(),
     val timeLayouts: MutableList<TimeLayout> = mutableListOf(),
     val subjects: MutableList<Subject> = mutableListOf(),
+    val classAssignments: MutableList<ClassAssignment> = mutableListOf(),
     val currentWeek: Int = 1,
     val totalWeeks: Int = 20,
     val currentWeekOffset: Int = 0
+)
+
+@Serializable
+data class ClassAssignment(
+    val id: String = UUID.randomUUID().toString(),
+    val week: Int = 0,
+    val dayOfWeek: Int = 1,
+    val timeLayoutItemId: String = "",
+    val subjectId: String = ""
 )
 
 @Serializable

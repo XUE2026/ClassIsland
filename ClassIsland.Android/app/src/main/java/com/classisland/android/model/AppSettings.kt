@@ -16,7 +16,16 @@ data class AppSettings(
     val enableGpuAcceleration: Boolean = true,
     val autoStartEnabled: Boolean = false,
     val firstLaunch: Boolean = true,
-    val licenseAccepted: Boolean = false
+    val licenseAccepted: Boolean = false,
+    val apiUrl: String = "https://classisland.example.com/api",
+    val apiEnabled: Boolean = false,
+    val syncIntervalMinutes: Int = 30,
+    val notificationEnabled: Boolean = true,
+    val vibrationEnabled: Boolean = true,
+    val autoUpdateCheck: Boolean = true,
+    val defaultClassPlanId: String = "",
+    val startOfWeek: Int = 1,
+    val totalWeeks: Int = 20
 )
 
 @Serializable
