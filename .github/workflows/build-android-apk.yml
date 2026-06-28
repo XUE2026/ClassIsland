@@ -3,16 +3,107 @@ name: Build Android APK
 on:
   push:
     branches:
-      - android_environment
+      - 'android**'
+  pull_request:
+    branches:
+      - 'android**'
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+      build_rust:
+        description: 'Build Rust native libraries'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
 
 jobs:
-  build:
+  build-rust:
+    name: Build Rust native libraries
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_rust }}
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ClassIsland.Android/rust_core/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('ClassIsland.Android/rust_core/Cargo.lock', 'ClassIsland.Android/rust_core/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Android NDK and Rust toolchains
+        run: |
+          # Install Rust
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
+
+          # Add Android targets
+          rustup target add aarch64-linux-android
+          rustup target add armv7-linux-androideabi
+          rustup target add x86_64-linux-android
+          rustup target add i686-linux-android
+
+          # Install cargo-ndk
+          cargo install cargo-ndk
+
+          # Install Android NDK
+          SDKMANAGER=$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager
+          $SDKMANAGER --install "ndk;27.0.12077973" || true
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Build Rust native libs
+        working-directory: ClassIsland.Android/rust_core
+        run: |
+          source "$HOME/.cargo/env"
+          export ANDROID_NDK_HOME="$ANDROID_NDK_HOME"
+
+          TARGETS=("aarch64-linux-android" "armv7-linux-androideabi" "x86_64-linux-android" "i686-linux-android")
+          ABIS=("arm64-v8a" "armeabi-v7a" "x86_64" "x86")
+
+          for i in "${!TARGETS[@]}"; do
+            echo "Building ${TARGETS[$i]}..."
+            cargo ndk -t "${ABIS[$i]}" build --release 2>&1 || \
+            cargo build --target "${TARGETS[$i]}" --release 2>&1
+            mkdir -p "../app/src/main/cpp/libs/${ABIS[$i]}"
+            cp "target/${TARGETS[$i]}/release/libclassisland_rust.so" "../app/src/main/cpp/libs/${ABIS[$i]}/" 2>/dev/null || \
+              echo "Warning: libclassisland_rust.so not found for ${TARGETS[$i]}"
+          done
+
+      - name: Upload Rust libs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-native-libs
+          path: ClassIsland.Android/app/src/main/cpp/libs/
+          if-no-files-found: warn
+
+  build-apk:
+    name: Build APK (${{ github.event.inputs.build_type || 'debug' }})
+    runs-on: ubuntu-latest
+    needs: build-rust
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-java@v4
         with:
@@ -21,20 +112,72 @@ jobs:
 
       - uses: android-actions/setup-android@v4
 
-      - name: Setup and build
+      - name: Download Rust libs
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-native-libs
+          path: ClassIsland.Android/app/src/main/cpp/libs/
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ClassIsland.Android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('ClassIsland.Android/**/*.gradle.kts', 'ClassIsland.Android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Setup local.properties
         working-directory: ClassIsland.Android
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -50
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ClassIsland.Android/gradlew
+
+      - name: Build Debug APK
+        if: ${{ github.event.inputs.build_type != 'release' }}
+        working-directory: ClassIsland.Android
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -80
+
+      - name: Build Release APK
+        if: ${{ github.event.inputs.build_type == 'release' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        working-directory: ClassIsland.Android
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > keystore.jks
+            echo "storeFile=$(pwd)/keystore.jks" >> keystore.properties
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD" >> keystore.properties
+            echo "keyAlias=$ANDROID_KEY_ALIAS" >> keystore.properties
+            echo "keyPassword=$ANDROID_KEY_PASSWORD" >> keystore.properties
+          fi
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tail -80
 
       - name: List APK files
         run: |
           echo "=== APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "NOT FOUND"
+          find /workspace -name "*.apk" -type f 2>/dev/null || echo "NOT FOUND"
 
-      - name: Upload APK
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: classisland-apk
-          path: ClassIsland.Android/app/build/outputs/apk/debug/*.apk
+          name: classisland-android-apk-${{ github.event.inputs.build_type || 'debug' }}-${{ github.sha }}
+          path: |
+            ClassIsland.Android/app/build/outputs/apk/debug/*.apk
+            ClassIsland.Android/app/build/outputs/apk/release/*.apk
           if-no-files-found: warn
+
+      - name: Upload APK as release asset (release only)
+        if: ${{ github.event.inputs.build_type == 'release' && startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ClassIsland.Android/app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
