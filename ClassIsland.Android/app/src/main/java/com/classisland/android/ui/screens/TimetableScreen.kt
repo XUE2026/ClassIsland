@@ -33,7 +33,7 @@ fun TimetableScreen(modifier: Modifier = Modifier) {
     var currentWeek by remember { mutableIntStateOf(profile.currentWeek) }
     var showSubjectDialog by remember { mutableStateOf(false) }
     var showTimeLayoutDialog by remember { mutableStateOf(false) }
-    var showCellDialog by remember { mutableStateOf<Pair<Int, String>?> { null }
+    var showCellDialog by remember { mutableStateOf<Pair<Int, String>?>(null) }
 
     val timeLayout = profile.timeLayouts.firstOrNull()
     val timeItems = timeLayout?.timeLayoutItems ?: mutableListOf()
