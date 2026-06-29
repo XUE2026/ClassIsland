@@ -31,6 +31,8 @@ import com.classisland.android.util.SettingsManager
 
 class MainActivity : ComponentActivity() {
     private var settings by mutableStateOf(AppSettings())
+    private var pendingTab by mutableIntStateOf(0)
+
     private val permOverlay =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { checkStart() }
     private val permNotify =
@@ -40,24 +42,39 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         settings = SettingsManager.get(this).load()
 
+        // 处理启动时的 classisland:// URI
+        handleClassIslandUri(intent)
+
         setContent {
             val allSettings = settings
             var showLicense by remember {
                 mutableStateOf(allSettings.firstLaunch && !allSettings.licenseAccepted)
             }
-            var showOverlayGuide by remember { mutableStateOf(false) }
+            var showOverlayGuide by remember {
+                mutableStateOf(shouldShowOverlayGuide(allSettings))
+            }
+            var currentTab by remember { mutableIntStateOf(pendingTab) }
+
+            // 处理 URI 导航切换 Tab
+            LaunchedEffect(pendingTab) {
+                currentTab = pendingTab
+            }
 
             ClassIslandTheme(allSettings.themeMode) {
                 if (showLicense) {
                     LicenseDialog(
                         onAccept = {
-                            settings = allSettings.copy(
+                            val updated = allSettings.copy(
                                 firstLaunch = false,
                                 licenseAccepted = true
                             )
-                            SettingsManager.get(this@MainActivity).save(settings)
+                            settings = updated
+                            SettingsManager.get(this@MainActivity).save(updated)
                             showLicense = false
-                            showOverlayGuide = true
+                            // 接受许可后，如果启用了悬浮窗但无权限，才引导
+                            if (updated.enableOverlay && !checkOverlayPermission()) {
+                                showOverlayGuide = true
+                            }
                         },
                         onDecline = { finish() }
                     )
@@ -65,7 +82,15 @@ class MainActivity : ComponentActivity() {
 
                 if (showOverlayGuide) {
                     OverlayPermissionDialog(
-                        onDismiss = { showOverlayGuide = false },
+                        onDismiss = {
+                            // 用户跳过：关闭悬浮窗开关，下次不再无端引导
+                            showOverlayGuide = false
+                            if (allSettings.enableOverlay) {
+                                val updated = allSettings.copy(enableOverlay = false)
+                                settings = updated
+                                SettingsManager.get(this@MainActivity).save(updated)
+                            }
+                        },
                         onRequestPermission = {
                             showOverlayGuide = false
                             requestOverlayPermission()
@@ -75,6 +100,8 @@ class MainActivity : ComponentActivity() {
 
                 MainScreen(
                     settings = allSettings,
+                    tab = currentTab,
+                    onTabChange = { currentTab = it },
                     onSettingsChanged = { s ->
                         settings = s
                         SettingsManager.get(this@MainActivity).save(s)
@@ -90,6 +117,34 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleClassIslandUri(intent)
+    }
+
+    /** 解析 classisland:// URI 并导航到对应页面 */
+    private fun handleClassIslandUri(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme != "classisland") return
+
+        val host = uri.host ?: return
+        if (host != "app") return
+
+        val path = uri.path ?: "/"
+        when {
+            path.startsWith("/settings") -> pendingTab = 1
+            path.startsWith("/edit") || path.startsWith("/profile") -> pendingTab = 0
+            else -> pendingTab = 0
+        }
+    }
+
+    /** 判断是否需要显示悬浮窗权限引导 */
+    private fun shouldShowOverlayGuide(s: AppSettings): Boolean {
+        // 首次启动时 license 还没处理，不抢先引导
+        if (s.firstLaunch) return false
+        return s.enableOverlay && !checkOverlayPermission()
     }
 
     private fun requestOverlayPermission() {
@@ -132,13 +187,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(
     settings: AppSettings,
+    tab: Int,
+    onTabChange: (Int) -> Unit,
     onSettingsChanged: (AppSettings) -> Unit,
     onStartOverlay: () -> Unit,
     onRequestOverlayPermission: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val ctx = LocalContext.current
-    var tab by remember { mutableIntStateOf(0) }
     val profile = remember { ProfileService.get(ctx).load() }
     var refreshKey by remember { mutableIntStateOf(0) }
 
@@ -157,9 +213,7 @@ fun MainScreen(
                 },
                 actions = {
                     if (tab == 0) {
-                        IconButton(onClick = {
-                            refreshKey++
-                        }) {
+                        IconButton(onClick = { refreshKey++ }) {
                             Icon(Icons.Default.Refresh, contentDescription = "刷新")
                         }
                     }
@@ -173,19 +227,19 @@ fun MainScreen(
             NavigationBar {
                 NavigationBarItem(
                     selected = tab == 0,
-                    onClick = { tab = 0 },
+                    onClick = { onTabChange(0) },
                     icon = { Icon(Icons.Default.Today, null) },
                     label = { Text("课表") }
                 )
                 NavigationBarItem(
                     selected = tab == 1,
-                    onClick = { tab = 1 },
+                    onClick = { onTabChange(1) },
                     icon = { Icon(Icons.Default.Settings, null) },
                     label = { Text("设置") }
                 )
                 NavigationBarItem(
                     selected = tab == 2,
-                    onClick = { tab = 2 },
+                    onClick = { onTabChange(2) },
                     icon = { Icon(Icons.Default.Info, null) },
                     label = { Text("关于") }
                 )
