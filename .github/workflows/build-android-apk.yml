@@ -141,7 +141,8 @@ jobs:
         if: ${{ github.event.inputs.build_type != 'release' }}
         working-directory: ClassIsland.Android
         run: |
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tail -80
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
+        shell: bash
 
       - name: Build Release APK
         if: ${{ github.event.inputs.build_type == 'release' }}
@@ -159,7 +160,8 @@ jobs:
             echo "keyAlias=$ANDROID_KEY_ALIAS" >> keystore.properties
             echo "keyPassword=$ANDROID_KEY_PASSWORD" >> keystore.properties
           fi
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tail -80
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1
+        shell: bash
 
       - name: List APK files
         run: |
