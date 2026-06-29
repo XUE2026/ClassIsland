@@ -180,6 +180,7 @@ private fun WeekSelector(
     }
 
     if (showWeekPicker) {
+        var weekSliderValue by remember { mutableFloatStateOf(currentWeek.toFloat()) }
         AlertDialog(
             onDismissRequest = { showWeekPicker = false },
             title = { Text("选择周数") },
@@ -187,7 +188,6 @@ private fun WeekSelector(
                 Column {
                     Text("当前：第 $currentWeek 周 / 共 $totalWeeks 周")
                     Spacer(Modifier.height(16.dp))
-                    var weekSliderValue by remember { mutableFloatStateOf(currentWeek.toFloat()) }
                     Slider(
                         value = weekSliderValue,
                         onValueChange = { weekSliderValue = it },
