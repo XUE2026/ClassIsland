@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.classisland.android.BuildConfig
 import com.classisland.android.util.Constants
 
 @Composable
@@ -27,7 +26,7 @@ fun AboutScreen(modifier: Modifier = Modifier) {
         Text("ClassIsland", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Text("智慧课表 · 悬浮窗", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
-        Text("版本 ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("版本 0.1.0 (预览)", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(32.dp)); Divider(); Spacer(Modifier.height(16.dp))
 
         ListItem(headlineContent = { Text("原作者") }, supportingContent = { Text("ClassIsland 项目组") }, leadingContent = { Icon(Icons.Default.Person, null) })
