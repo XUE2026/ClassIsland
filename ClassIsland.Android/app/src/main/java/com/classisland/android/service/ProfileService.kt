@@ -31,10 +31,18 @@ class ProfileService private constructor(private val ctx: Context) {
         }.toMutableList()
 
         val items = listOf("08:00" to "08:45","08:55" to "09:40","09:50" to "10:35","10:45" to "11:30","11:40" to "12:25","14:00" to "14:45","14:55" to "15:40","15:50" to "16:35","16:45" to "17:30").mapIndexed { i, (s, e) ->
-            TimeLayoutItem(id = "tli_$i", startTime = s, endTime = e, lessonName = if (i < subjects.size) subjects[i].id else "", timeType = 0)
+            TimeLayoutItem(id = "tli_$i", startTime = s, endTime = e, lessonName = "", timeType = 0)
         }.toMutableList()
 
-        return Profile(subjects = subjects, timeLayouts = mutableListOf(TimeLayout(id = "layout_default", name = "默认时间布局", timeLayoutItems = items)))
+        val layout = TimeLayout(id = "layout_default", name = "默认时间布局", timeLayoutItems = items)
+        val plan = ClassPlan(id = "plan_default", name = "默认课程表", timeLayoutId = "layout_default", isEnabled = true)
+
+        return Profile(
+            subjects = subjects,
+            timeLayouts = mutableListOf(layout),
+            classPlans = mutableListOf(plan),
+            classAssignments = mutableListOf()
+        )
     }
 
     companion object {

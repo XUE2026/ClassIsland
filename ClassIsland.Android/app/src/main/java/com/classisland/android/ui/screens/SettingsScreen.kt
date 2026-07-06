@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.classisland.android.model.AppSettings
-import com.classisland.android.model.profile.ClassPlan
 import com.classisland.android.util.Constants
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,8 +18,6 @@ import com.classisland.android.util.Constants
 fun SettingsScreen(
     settings: AppSettings,
     onChanged: (AppSettings) -> Unit,
-    classPlans: List<ClassPlan> = emptyList(),
-    onSyncNow: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -35,11 +32,11 @@ fun SettingsScreen(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        DataSyncSection(settings, onChanged, onSyncNow)
+        DataSyncSection(settings, onChanged)
 
         Divider(Modifier.padding(vertical = 16.dp))
 
-        TimetableSection(settings, onChanged, classPlans)
+        TimetableSection(settings, onChanged)
 
         Divider(Modifier.padding(vertical = 16.dp))
 
@@ -60,8 +57,7 @@ fun SettingsScreen(
 @Composable
 private fun DataSyncSection(
     settings: AppSettings,
-    onChanged: (AppSettings) -> Unit,
-    onSyncNow: () -> Unit
+    onChanged: (AppSettings) -> Unit
 ) {
     Text(
         "数据同步",
@@ -123,7 +119,7 @@ private fun DataSyncSection(
             headlineContent = { Text("立即同步") },
             supportingContent = { Text("手动触发一次数据同步") },
             trailingContent = {
-                Button(onClick = onSyncNow) {
+                Button(onClick = { /* 手动同步暂未实现 */ }) {
                     Icon(Icons.Default.Refresh, null)
                     Spacer(Modifier.width(4.dp))
                     Text("同步")
@@ -136,8 +132,7 @@ private fun DataSyncSection(
 @Composable
 private fun TimetableSection(
     settings: AppSettings,
-    onChanged: (AppSettings) -> Unit,
-    classPlans: List<ClassPlan>
+    onChanged: (AppSettings) -> Unit
 ) {
     Text(
         "课表设置",
@@ -146,11 +141,9 @@ private fun TimetableSection(
     )
 
     var planExpanded by remember { mutableStateOf(false) }
-    val currentPlanName = classPlans.find { it.id == settings.defaultClassPlanId }?.name
-        ?: if (classPlans.isNotEmpty()) classPlans[0].name else "无"
     ListItem(
         headlineContent = { Text("默认课表计划") },
-        supportingContent = { Text(currentPlanName) },
+        supportingContent = { Text(settings.defaultClassPlanId.ifEmpty { "默认" }) },
         trailingContent = {
             Box {
                 TextButton({ planExpanded = true }) { Text("更改") }
@@ -158,21 +151,13 @@ private fun TimetableSection(
                     expanded = planExpanded,
                     onDismissRequest = { planExpanded = false }
                 ) {
-                    classPlans.forEach { plan ->
-                        DropdownMenuItem(
-                            text = { Text(plan.name) },
-                            onClick = {
-                                onChanged(settings.copy(defaultClassPlanId = plan.id))
-                                planExpanded = false
-                            }
-                        )
-                    }
-                    if (classPlans.isEmpty()) {
-                        DropdownMenuItem(
-                            text = { Text("暂无课表计划") },
-                            onClick = {}
-                        )
-                    }
+                    DropdownMenuItem(
+                        text = { Text("默认") },
+                        onClick = {
+                            onChanged(settings.copy(defaultClassPlanId = ""))
+                            planExpanded = false
+                        }
+                    )
                 }
             }
         }

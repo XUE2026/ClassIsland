@@ -1,8 +1,5 @@
 package com.classisland.android.model
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class AppSettings(
     val language: String = "zh",
     val themeMode: String = "system",
@@ -28,7 +25,6 @@ data class AppSettings(
     val totalWeeks: Int = 20
 )
 
-@Serializable
 data class OverlayStyle(
     val backgroundColor: String = "#B2000000",
     val textColor: String = "#FFFFFFFF",

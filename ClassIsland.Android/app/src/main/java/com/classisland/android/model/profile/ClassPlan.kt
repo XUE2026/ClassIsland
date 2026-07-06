@@ -1,9 +1,7 @@
 package com.classisland.android.model.profile
 
-import kotlinx.serialization.Serializable
 import java.util.UUID
 
-@Serializable
 data class Profile(
     val name: String = "我的课表",
     val classPlans: MutableList<ClassPlan> = mutableListOf(),
@@ -15,7 +13,6 @@ data class Profile(
     val currentWeekOffset: Int = 0
 )
 
-@Serializable
 data class ClassAssignment(
     val id: String = UUID.randomUUID().toString(),
     val week: Int = 0,
@@ -24,7 +21,6 @@ data class ClassAssignment(
     val subjectId: String = ""
 )
 
-@Serializable
 data class ClassPlan(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
@@ -32,7 +28,6 @@ data class ClassPlan(
     val isEnabled: Boolean = true
 )
 
-@Serializable
 data class Subject(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
@@ -41,14 +36,12 @@ data class Subject(
     val color: String = "#FF2196F3"
 )
 
-@Serializable
 data class TimeLayout(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "",
     val timeLayoutItems: MutableList<TimeLayoutItem> = mutableListOf()
 )
 
-@Serializable
 data class TimeLayoutItem(
     val id: String = UUID.randomUUID().toString(),
     val startTime: String = "08:00",

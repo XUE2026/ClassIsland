@@ -32,22 +32,49 @@ class NotificationService : Service() {
             val layout = p.timeLayouts.firstOrNull { it.id == plan.timeLayoutId } ?: return@withContext
             val cal = java.util.Calendar.getInstance()
             val now = "%02d:%02d".format(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE))
+            // 今天星期几（1=周一..7=周日）
+            val today = ((cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7) + 1
 
             layout.timeLayoutItems.filter { it.timeType == 0 }.forEach { item ->
-                val name = p.subjects.firstOrNull { it.id == item.lessonName }?.name ?: item.lessonName
-                val startMin = item.startTime.split(":").let { it[0].toInt()*60 + it[1].toInt() }
-                val nowMin = now.split(":").let { it[0].toInt()*60 + it[1].toInt() }
-                if (nowMin in (startMin-5) until startMin) send("即将上课", "${name} 将在5分钟后开始")
-                if (now == item.startTime) send("上课提醒", "${name} 已经开始上课")
+                // 通过 classAssignments 判断今天该时段是否有课
+                val assignment = p.classAssignments.firstOrNull { a ->
+                    (a.week == 0 || a.week == p.currentWeek) &&
+                    a.dayOfWeek == today &&
+                    a.timeLayoutItemId == item.id
+                }
+                if (assignment == null) return@forEach
+
+                val sub = p.subjects.firstOrNull { it.id == assignment.subjectId }
+                val name = sub?.name ?: assignment.subjectId
+
+                val startParts = item.startTime.split(":")
+                val nowParts = now.split(":")
+                if (startParts.size < 2 || nowParts.size < 2) return@forEach
+                val startMin = startParts[0].toInt() * 60 + startParts[1].toInt()
+                val nowMin = nowParts[0].toInt() * 60 + nowParts[1].toInt()
+
+                if (nowMin in (startMin - 5) until startMin) {
+                    send("即将上课", "${name} 将在5分钟后开始")
+                }
+                if (now == item.startTime) {
+                    send("上课提醒", "${name} 已经开始上课")
+                }
             }
         }
     }
 
     private fun send(title: String, content: String) {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(System.currentTimeMillis().toInt(), NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info).setContentTitle(title).setContentText(content)
-            .setPriority(NotificationCompat.PRIORITY_HIGH).setAutoCancel(true).build())
+        nm.notify(
+            System.currentTimeMillis().toInt(),
+            NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .build()
+        )
     }
 
     override fun onBind(i: Intent?) = null

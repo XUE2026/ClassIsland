@@ -31,18 +31,20 @@ import com.classisland.android.util.SettingsManager
 
 class MainActivity : ComponentActivity() {
     private var settings by mutableStateOf(AppSettings())
-    private var pendingTab by mutableIntStateOf(0)
 
+    // 从系统覆盖层设置返回后，只启动服务，不重新请求权限
     private val permOverlay =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { checkStart() }
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            checkAndStartService()
+        }
     private val permNotify =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { checkStart() }
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) checkAndStartService()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         settings = SettingsManager.get(this).load()
-
-        // 处理启动时的 classisland:// URI
         handleClassIslandUri(intent)
 
         setContent {
@@ -50,14 +52,16 @@ class MainActivity : ComponentActivity() {
             var showLicense by remember {
                 mutableStateOf(allSettings.firstLaunch && !allSettings.licenseAccepted)
             }
+            // 响应 enableOverlay 变化，实时检测权限引导
             var showOverlayGuide by remember {
                 mutableStateOf(shouldShowOverlayGuide(allSettings))
             }
-            var currentTab by remember { mutableIntStateOf(pendingTab) }
 
-            // 处理 URI 导航切换 Tab
-            LaunchedEffect(pendingTab) {
-                currentTab = pendingTab
+            // 当 settings 中的 enableOverlay 变化时，重新评估引导弹窗
+            LaunchedEffect(allSettings.enableOverlay) {
+                if (!showLicense) {
+                    showOverlayGuide = shouldShowOverlayGuide(allSettings)
+                }
             }
 
             ClassIslandTheme(allSettings.themeMode) {
@@ -71,8 +75,7 @@ class MainActivity : ComponentActivity() {
                             settings = updated
                             SettingsManager.get(this@MainActivity).save(updated)
                             showLicense = false
-                            // 接受许可后，如果启用了悬浮窗但无权限，才引导
-                            if (updated.enableOverlay && !checkOverlayPermission()) {
+                            if (shouldShowOverlayGuide(updated)) {
                                 showOverlayGuide = true
                             }
                         },
@@ -83,7 +86,6 @@ class MainActivity : ComponentActivity() {
                 if (showOverlayGuide) {
                     OverlayPermissionDialog(
                         onDismiss = {
-                            // 用户跳过：关闭悬浮窗开关，下次不再无端引导
                             showOverlayGuide = false
                             if (allSettings.enableOverlay) {
                                 val updated = allSettings.copy(enableOverlay = false)
@@ -100,20 +102,22 @@ class MainActivity : ComponentActivity() {
 
                 MainScreen(
                     settings = allSettings,
-                    tab = currentTab,
-                    onTabChange = { currentTab = it },
                     onSettingsChanged = { s ->
                         settings = s
                         SettingsManager.get(this@MainActivity).save(s)
-                    },
-                    onStartOverlay = {
-                        if (checkOverlayPermission()) {
-                            startService(Intent(this@MainActivity, OverlayService::class.java))
-                        } else {
+                        // 如果刚开启了悬浮窗，检查权限
+                        if (s.enableOverlay && !checkOverlayPermission()) {
                             showOverlayGuide = true
                         }
-                    },
-                    onRequestOverlayPermission = { requestOverlayPermission() }
+                        // 如果开启了悬浮窗且有权限，启动服务
+                        if (s.enableOverlay && checkOverlayPermission()) {
+                            startService(Intent(this@MainActivity, OverlayService::class.java))
+                        }
+                        // 如果关闭了悬浮窗，停止服务
+                        if (!s.enableOverlay) {
+                            stopService(Intent(this@MainActivity, OverlayService::class.java))
+                        }
+                    }
                 )
             }
         }
@@ -124,25 +128,15 @@ class MainActivity : ComponentActivity() {
         handleClassIslandUri(intent)
     }
 
-    /** 解析 classisland:// URI 并导航到对应页面 */
     private fun handleClassIslandUri(intent: Intent?) {
         val uri = intent?.data ?: return
         if (uri.scheme != "classisland") return
-
         val host = uri.host ?: return
         if (host != "app") return
-
-        val path = uri.path ?: "/"
-        when {
-            path.startsWith("/settings") -> pendingTab = 1
-            path.startsWith("/edit") || path.startsWith("/profile") -> pendingTab = 0
-            else -> pendingTab = 0
-        }
+        // 不再用 pendingTab（因为现在用 LaunchedEffect 响应 settings 变化）
     }
 
-    /** 判断是否需要显示悬浮窗权限引导 */
     private fun shouldShowOverlayGuide(s: AppSettings): Boolean {
-        // 首次启动时 license 还没处理，不抢先引导
         if (s.firstLaunch) return false
         return s.enableOverlay && !checkOverlayPermission()
     }
@@ -150,10 +144,8 @@ class MainActivity : ComponentActivity() {
     private fun requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             permOverlay.launch(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                )
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName"))
             )
         }
     }
@@ -163,21 +155,19 @@ class MainActivity : ComponentActivity() {
                 Settings.canDrawOverlays(this)
     }
 
-    private fun checkStart() {
-        if (!checkOverlayPermission()) {
-            requestOverlayPermission()
-            return
-        }
+    /** 从系统设置返回后：检查权限，如果 OK 则启动服务 */
+    private fun checkAndStartService() {
+        val current = SettingsManager.get(this).load()
+        if (!checkOverlayPermission()) return
+        // 通知权限（Android 13+）
         if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
         ) {
             permNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
-        if (settings.enableOverlay) {
+        if (current.enableOverlay) {
             startService(Intent(this, OverlayService::class.java))
         }
     }
@@ -187,29 +177,24 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(
     settings: AppSettings,
-    tab: Int,
-    onTabChange: (Int) -> Unit,
     onSettingsChanged: (AppSettings) -> Unit,
-    onStartOverlay: () -> Unit,
-    onRequestOverlayPermission: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val ctx = LocalContext.current
     val profile = remember { ProfileService.get(ctx).load() }
     var refreshKey by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        when (tab) {
-                            0 -> "课表"
-                            1 -> "设置"
-                            2 -> "关于"
-                            else -> "ClassIsland"
-                        }
-                    )
+                    Text(when (tab) {
+                        0 -> "课表"
+                        1 -> "设置"
+                        2 -> "关于"
+                        else -> "ClassIsland"
+                    })
                 },
                 actions = {
                     if (tab == 0) {
@@ -226,20 +211,17 @@ fun MainScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = tab == 0,
-                    onClick = { onTabChange(0) },
+                    selected = tab == 0, onClick = { tab = 0 },
                     icon = { Icon(Icons.Default.Today, null) },
                     label = { Text("课表") }
                 )
                 NavigationBarItem(
-                    selected = tab == 1,
-                    onClick = { onTabChange(1) },
+                    selected = tab == 1, onClick = { tab = 1 },
                     icon = { Icon(Icons.Default.Settings, null) },
                     label = { Text("设置") }
                 )
                 NavigationBarItem(
-                    selected = tab == 2,
-                    onClick = { onTabChange(2) },
+                    selected = tab == 2, onClick = { tab = 2 },
                     icon = { Icon(Icons.Default.Info, null) },
                     label = { Text("关于") }
                 )
@@ -251,10 +233,6 @@ fun MainScreen(
             1 -> SettingsScreen(
                 settings = settings,
                 onChanged = onSettingsChanged,
-                classPlans = profile.classPlans.toList(),
-                onSyncNow = {
-                    // 手动同步触发
-                },
                 modifier = Modifier.padding(padding)
             )
             2 -> AboutScreen(modifier = Modifier.padding(padding))
